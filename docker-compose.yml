@@ -9,7 +9,7 @@ services:
     env_file:
       - 'env.influxdb'
     volumes:
-      - /opt/influxdb/data:/var/lib/influxdb
+      - /opt/nest_temperature_forwarder/influxdb:/var/lib/influxdb
     networks:
      - proxy
     deploy:
