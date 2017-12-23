@@ -39,7 +39,7 @@ services:
           memory: 20M
 
   cron:
-    build: .
+    image: registry.smirlwebs.com/smirl/nest_temperature_forwarder:latest
     volumes:
       - .:/opt/code
     networks:
