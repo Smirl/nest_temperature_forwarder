@@ -58,8 +58,8 @@ def _get_secrets():
     if os.path.exists('/run/secrets/nest_access_token'):
         with open('/run/secrets/nest_access_token') as f:
             access_token = f.read().strip()
-    if os.path.exists('/run/secrets/influxdb_read_user_password'):
-        with open('/run/secrets/influxdb_read_user_password') as f:
+    if os.path.exists('/run/secrets/influxdb_write_user_password'):
+        with open('/run/secrets/influxdb_write_user_password') as f:
             influx_password = f.read().strip()
     return access_token, influx_password
 
