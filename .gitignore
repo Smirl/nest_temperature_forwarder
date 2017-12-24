@@ -1,5 +1,6 @@
 # Custom
 influxdb/
+grafana/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

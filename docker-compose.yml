@@ -2,8 +2,8 @@ version: '3.1'
 services:
   influxdb:
     image: influxdb:latest
-    ports:
-      - "8086:8086"
+    expose:
+      - "8086"
     environment:
       INFLUXDB_DB: nest_temperature_forwarder
       INFLUXDB_REPORTING_DISABLED: 'false'
@@ -34,9 +34,9 @@ services:
         window: 120s
       resources:
         limits:
-          memory: 50M
+          memory: 200M
         reservations:
-          memory: 20M
+          memory: 50M
 
   cron:
     image: registry.smirlwebs.com/smirl/nest_temperature_forwarder:1.3.0
