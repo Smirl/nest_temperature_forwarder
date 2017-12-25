@@ -100,3 +100,7 @@ secrets:
     external: true
   influxdb_write_user_password:
     external: true
+  weatherunlocked_app_id:
+    external: true
+  weatherunlocked_app_key:
+    external: true
