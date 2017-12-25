@@ -24,13 +24,24 @@ logger.addHandler(handler)
 
 def main():
     """Get the metrics, put them in the database, done."""
-    access_token, influx_password = _get_secrets()
+    access_token = _get_secret(
+        'nest_access_token', os.environ.get('NEST_ACCESS_TOKEN', 'foo'))
+    influx_password = _get_secret('influxdb_write_user_password', 'writer')
+    weatherunlocked_app_id = _get_secret('weatherunlocked_app_id')
+    weatherunlocked_app_key = _get_secret('weatherunlocked_app_key')
+
     response = requests.get(
         'https://developer-api.nest.com/',
         params={'auth': access_token}
-    ).json()
+    )
+    response.raise_for_status()
+    response = response.json()
+
+    structures = _get_structures(response)
 
     metrics = []
+    postal_codes = set()
+
     for thermostat in response['devices']['thermostats'].values():
         data = _parse_thermostat(thermostat)
         for metric_key, metric_value in data['metrics'].items():
@@ -44,6 +55,36 @@ def main():
                     'value': metric_value
                 }
             })
+        metrics.append({
+            'measurement': 'thermostat_state',
+            'tags': {
+                'name': data['name'],
+                'hvac_mode': data['state']['hvac_mode'],
+                'hvac_state': data['state']['hvac_state'],
+            },
+            'time': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'fields': {
+                'value': 1
+            }
+        })
+
+        postal_code = structures[data['structure_id']]['postal_code']
+        if postal_code not in postal_codes:
+            weather = get_weather(
+                postal_code,
+                weatherunlocked_app_id,
+                weatherunlocked_app_key
+            )
+            metrics.append({
+                'measurement': 'weather',
+                'tags': {
+                    'name': data['name'],
+                },
+                'time': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+                'fields': weather
+            })
+            postal_codes.add(postal_code)
+
     client = InfluxDBClient(
         'influxdb', 8086, 'writer',
         influx_password, 'nest_temperature_forwarder'
@@ -51,17 +92,14 @@ def main():
     client.write_points(metrics)
 
 
-def _get_secrets():
-    """Return the loaded secrets."""
-    access_token = os.environ.get('NEST_ACCESS_TOKEN', 'foo')
-    influx_password = 'writer'
-    if os.path.exists('/run/secrets/nest_access_token'):
-        with open('/run/secrets/nest_access_token') as f:
-            access_token = f.read().strip()
-    if os.path.exists('/run/secrets/influxdb_write_user_password'):
-        with open('/run/secrets/influxdb_write_user_password') as f:
-            influx_password = f.read().strip()
-    return access_token, influx_password
+def _get_secret(name, default=''):
+    """Return the given secret or the default."""
+    path = '/run/secrets/{name}'.format(name=name)
+    if os.path.exists(path):
+        with open(path) as f:
+            return f.read().strip()
+    else:
+        return default
 
 
 def _get_structures(response):
@@ -96,6 +134,20 @@ def _parse_thermostat(thermostat):
             'target_temperature_low_c': thermostat['target_temperature_low_c'],
         }
     }
+
+
+def get_weather(postal_code, app_id, app_key):
+    """Call the weather unlocked API for the given postal_code."""
+    response = requests.get(
+        'http://api.weatherunlocked.com/api/current/uk.{0}'.format(postal_code),
+        params={
+            'app_id': app_id,
+            'app_key': app_key,
+        }
+    )
+    response.raise_for_status()
+    response = response.json()
+    return {'temp_c': response['temp_c'], 'feelslike_c': response['feelslike_c']}
 
 
 if __name__ == '__main__':

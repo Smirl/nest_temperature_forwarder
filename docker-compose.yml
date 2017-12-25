@@ -39,7 +39,7 @@ services:
           memory: 50M
 
   cron:
-    image: registry.smirlwebs.com/smirl/nest_temperature_forwarder:1.3.0
+    image: registry.smirlwebs.com/smirl/nest_temperature_forwarder:1.4.0
     volumes:
       - .:/opt/code
     networks:
@@ -47,6 +47,8 @@ services:
     secrets:
       - nest_access_token
       - influxdb_write_user_password
+      - weatherunlocked_app_id
+      - weatherunlocked_app_key
 
 
   grafana:
