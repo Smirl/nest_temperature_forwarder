@@ -11,6 +11,8 @@ swarm:
 	* influxdb_admin_password
 	* influxdb_read_user_password
 	* influxdb_write_user_password
+	* weatherunlocked_app_id
+	* weatherunlocked_app_key
 
 
 The stack is updated with:
