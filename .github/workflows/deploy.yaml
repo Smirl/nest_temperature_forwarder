@@ -3,7 +3,6 @@ name: Deploy
 on:
   push:
     tags:
-      - v*
   release:
     types:
       - published
@@ -33,7 +32,7 @@ jobs:
           registry: ghcr.io
           tags: |
             ghcr.io/smirl/nest_temperature_forwarder:latest
-          # - smirl/nest_temperature_forwarder:${GITHUB_REF#refs/tags/}
+            ghcr.io/smirl/nest_temperature_forwarder:${GITHUB_REF#refs/tags/}
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
