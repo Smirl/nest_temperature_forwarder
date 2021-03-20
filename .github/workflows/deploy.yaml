@@ -40,6 +40,4 @@ jobs:
         with:
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}
-
-      - name: Image digest
-        run: echo ${{ steps.docker_build.outputs.digest }}
+          labels: ${{ steps.docker_meta.outputs.labels }}
