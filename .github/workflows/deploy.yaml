@@ -11,6 +11,15 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Docker meta
+        id: docker_meta
+        uses: crazy-max/ghaction-docker-meta@v1
+        with:
+          images: ghcr.io/smirl/nest_temperature_forwarder
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
@@ -30,9 +39,7 @@ jobs:
         with:
           push: true
           registry: ghcr.io
-          tags: |
-            ghcr.io/smirl/nest_temperature_forwarder:latest
-            ghcr.io/smirl/nest_temperature_forwarder:${GITHUB_REF#refs/tags/}
+          tags: ${{ steps.docker_meta.outputs.tags }}
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
