@@ -31,9 +31,9 @@ jobs:
         with:
           push: true
           registry: ghcr.io
-          tags:
-            - smirl/nest_temperature_forwarder:latest
-            # - smirl/nest_temperature_forwarder:${GITHUB_REF#refs/tags/}
+          tags: |
+            smirl/nest_temperature_forwarder:latest
+          # - smirl/nest_temperature_forwarder:${GITHUB_REF#refs/tags/}
 
       - name: Image digest
         run: echo ${{ steps.docker_build.outputs.digest }}
