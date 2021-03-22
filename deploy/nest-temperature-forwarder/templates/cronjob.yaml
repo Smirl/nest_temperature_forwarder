@@ -50,6 +50,8 @@ spec:
                   secretKeyRef:
                     name: nest-temperature-forwarder
                     key: admin-token
+              - name: INFLUX_URL
+                value: "http://{{ .Release.Name }}-influxdb2.{{ .Release.Namespace}}.svc.cluster.local:80"
             resources:
               {{- toYaml .Values.resources | nindent 14 }}
           restartPolicy: OnFailure

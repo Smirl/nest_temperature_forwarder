@@ -21,6 +21,16 @@ When the browser opens rename the bucket without `autogen`.
 A new backup named `backup-v2.tar.gz` will be available to restore a clean helm
 install from.
 
+```console
+kubectl cp ./backup-v2.tar.gz influxdb:/tmp/backup-v2.tar.gz
+kubectl exec -it influxdb -- bash
+> export INFLUX_TOKEN=<TOKEN>
+> export INFLUX_ORG=nest_temperature_forwarder
+> cd /tmp/
+> tar -xvf backup-v2.tar.gz backup-v2/
+> influx restore --full backup-v2/
+```
+
 
 ## Deployment
 
