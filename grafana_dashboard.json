@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "iteration": 1564501352025,
+  "iteration": 1616455318958,
   "links": [],
   "panels": [
     {
@@ -25,8 +25,29 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": "${datasource}",
       "decimals": 1,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/.+hvac_mode.+/"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Mode: ${__field.labels.hvac_mode} State: ${__field.labels.hvac_state}"
+              }
+            ]
+          }
+        ]
+      },
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 9,
         "w": 24,
@@ -34,6 +55,7 @@
         "y": 0
       },
       "height": "350px",
+      "hiddenSeries": false,
       "id": 1,
       "legend": {
         "alignAsTable": true,
@@ -51,13 +73,17 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.4.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
       "seriesOverrides": [
         {
+          "$$hashKey": "object:99",
           "alias": "/Mode.*/",
           "fill": 5,
           "legend": false,
@@ -67,28 +93,29 @@
           "zindex": -3
         },
         {
-          "alias": "Mode:eco  State:off",
+          "$$hashKey": "object:100",
+          "alias": "Mode:eco State:off",
           "color": "#58140c"
         },
         {
-          "alias": "Mode:eco  State:heating",
+          "$$hashKey": "object:101",
+          "alias": "Mode:eco State:heating",
           "color": "#3f6833"
         },
         {
-          "alias": "Mode:heat  State:off",
+          "$$hashKey": "object:102",
+          "alias": "Mode:heat State:off",
           "color": "#890f02"
         },
         {
-          "alias": "Mode:heat  State:heating",
+          "$$hashKey": "object:103",
+          "alias": "Mode: heat State: heating",
           "color": "#508642"
         },
         {
-          "alias": "Mode:off  State:off",
-          "lines": false
-        },
-        {
-          "alias": "Outside Temperature",
-          "color": "#f9d9f9"
+          "$$hashKey": "object:104",
+          "alias": "Mode: heat State: off",
+          "color": "rgb(54, 16, 19)"
         }
       ],
       "spaceLength": 10,
@@ -96,25 +123,25 @@
       "steppedLine": true,
       "targets": [
         {
-          "alias": "Inside Temperature",
-          "dsType": "influxdb",
           "groupBy": [
             {
               "params": [
-                "$sample"
+                "$__interval"
               ],
               "type": "time"
             },
             {
               "params": [
-                "previous"
+                "null"
               ],
               "type": "fill"
             }
           ],
-          "measurement": "ambient_temperature_c",
+          "hide": true,
           "orderByTime": "ASC",
           "policy": "default",
+          "query": "from(bucket: \"nest_temperature_forwarder\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"ambient_temperature_c\" or r[\"_measurement\"] == \"target_temperature_c\" or r[\"_measurement\"] == \"weather\" or r[\"_measurement\"] == \"eco_temperature_low_c\")\n  |> filter(fn: (r) => r[\"name\"] == \"Living Room\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\" or r[\"_field\"] == \"temp_c\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)\n  |> yield(name: \"mean\")",
+          "queryType": "randomWalk",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -134,25 +161,24 @@
           "tags": []
         },
         {
-          "alias": "Target",
-          "dsType": "influxdb",
           "groupBy": [
             {
               "params": [
-                "$sample"
+                "$__interval"
               ],
               "type": "time"
             },
             {
               "params": [
-                "previous"
+                "null"
               ],
               "type": "fill"
             }
           ],
-          "measurement": "target_temperature_c",
+          "hide": false,
           "orderByTime": "ASC",
           "policy": "default",
+          "query": "from(bucket: \"nest_temperature_forwarder\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"thermostat_state\")\n  |> group(columns: [\"hvac_mode\", \"hvac_state\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)\n  |> yield(name: \"mean\")",
           "refId": "B",
           "resultFormat": "time_series",
           "select": [
@@ -160,132 +186,6 @@
               {
                 "params": [
                   "value"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              }
-            ]
-          ],
-          "tags": []
-        },
-        {
-          "alias": "Eco Temperature",
-          "dsType": "influxdb",
-          "groupBy": [
-            {
-              "params": [
-                "$sample"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "previous"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "eco_temperature_low_c",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "C",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              }
-            ]
-          ],
-          "tags": []
-        },
-        {
-          "alias": "Mode:$tag_hvac_mode  State:$tag_hvac_state",
-          "dsType": "influxdb",
-          "groupBy": [
-            {
-              "params": [
-                "$sample"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "hvac_mode"
-              ],
-              "type": "tag"
-            },
-            {
-              "params": [
-                "hvac_state"
-              ],
-              "type": "tag"
-            },
-            {
-              "params": [
-                "0"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "thermostat_state",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "D",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "value"
-                ],
-                "type": "field"
-              },
-              {
-                "params": [],
-                "type": "mean"
-              }
-            ]
-          ],
-          "tags": []
-        },
-        {
-          "alias": "Outside Temperature",
-          "dsType": "influxdb",
-          "groupBy": [
-            {
-              "params": [
-                "$sample"
-              ],
-              "type": "time"
-            },
-            {
-              "params": [
-                "previous"
-              ],
-              "type": "fill"
-            }
-          ],
-          "measurement": "weather",
-          "orderByTime": "ASC",
-          "policy": "default",
-          "refId": "E",
-          "resultFormat": "time_series",
-          "select": [
-            [
-              {
-                "params": [
-                  "temp_c"
                 ],
                 "type": "field"
               },
@@ -348,7 +248,14 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": "${datasource}",
       "decimals": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "format": "m",
       "gauge": {
         "maxValue": 300,
@@ -380,7 +287,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -401,7 +307,6 @@
       "tableColumn": "",
       "targets": [
         {
-          "dsType": "influxdb",
           "groupBy": [
             {
               "params": [
@@ -416,9 +321,10 @@
               "type": "fill"
             }
           ],
-          "measurement": "thermostat_state",
           "orderByTime": "ASC",
           "policy": "default",
+          "query": "from(bucket: \"nest_temperature_forwarder\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"thermostat_state\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> filter(fn: (r) => r[\"hvac_state\"] == \"heating\")\n  |> count()\n  |> map(fn: (r) => ({ _value: r._value * 5 }))\n  |> yield(name: \"count\")\n  ",
+          "queryType": "randomWalk",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -431,23 +337,11 @@
               },
               {
                 "params": [],
-                "type": "count"
-              },
-              {
-                "params": [
-                  "*5"
-                ],
-                "type": "math"
+                "type": "mean"
               }
             ]
           ],
-          "tags": [
-            {
-              "key": "hvac_state",
-              "operator": "=",
-              "value": "heating"
-            }
-          ]
+          "tags": []
         }
       ],
       "thresholds": "90,120",
@@ -472,7 +366,14 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": "${datasource}",
       "decimals": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "format": "m",
       "gauge": {
         "maxValue": 300,
@@ -505,7 +406,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -526,11 +426,10 @@
       "tableColumn": "",
       "targets": [
         {
-          "dsType": "influxdb",
           "groupBy": [
             {
               "params": [
-                "$sample"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -541,9 +440,10 @@
               "type": "fill"
             }
           ],
-          "measurement": "thermostat_state",
           "orderByTime": "ASC",
           "policy": "default",
+          "query": "from(bucket: \"nest_temperature_forwarder\")\n  |> range(start: -1d, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"thermostat_state\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> filter(fn: (r) => r[\"hvac_state\"] == \"heating\")\n  |> count()\n  |> map(fn: (r) => ({ _value: r._value * 5 }))\n  |> yield(name: \"count\")\n  ",
+          "queryType": "randomWalk",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -556,23 +456,11 @@
               },
               {
                 "params": [],
-                "type": "count"
-              },
-              {
-                "params": [
-                  "*5"
-                ],
-                "type": "math"
+                "type": "mean"
               }
             ]
           ],
-          "tags": [
-            {
-              "key": "hvac_state",
-              "operator": "=",
-              "value": "heating"
-            }
-          ]
+          "tags": []
         }
       ],
       "thresholds": "90,120",
@@ -598,7 +486,14 @@
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
+      "datasource": "${datasource}",
       "decimals": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "format": "m",
       "gauge": {
         "maxValue": 1200,
@@ -630,7 +525,6 @@
       "maxDataPoints": 100,
       "nullPointMode": "connected",
       "nullText": null,
-      "options": {},
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -651,11 +545,10 @@
       "tableColumn": "",
       "targets": [
         {
-          "dsType": "influxdb",
           "groupBy": [
             {
               "params": [
-                "$sample"
+                "$__interval"
               ],
               "type": "time"
             },
@@ -666,9 +559,10 @@
               "type": "fill"
             }
           ],
-          "measurement": "thermostat_state",
           "orderByTime": "ASC",
           "policy": "default",
+          "query": "from(bucket: \"nest_temperature_forwarder\")\n  |> range(start: -1w, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"thermostat_state\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> filter(fn: (r) => r[\"hvac_state\"] == \"heating\")\n  |> count()\n  |> map(fn: (r) => ({ _value: r._value * 5 }))\n  |> yield(name: \"count\")\n  ",
+          "queryType": "randomWalk",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -681,23 +575,11 @@
               },
               {
                 "params": [],
-                "type": "count"
-              },
-              {
-                "params": [
-                  "*5"
-                ],
-                "type": "math"
+                "type": "mean"
               }
             ]
           ],
-          "tags": [
-            {
-              "key": "hvac_state",
-              "operator": "=",
-              "value": "heating"
-            }
-          ]
+          "tags": []
         }
       ],
       "thresholds": "630,840",
@@ -719,14 +601,23 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": "${datasource}",
       "decimals": 0,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 24,
         "x": 0,
         "y": 16
       },
+      "hiddenSeries": false,
       "id": 5,
       "legend": {
         "alignAsTable": true,
@@ -742,8 +633,11 @@
       "linewidth": 3,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "alertThreshold": true
+      },
       "percentage": false,
+      "pluginVersion": "7.4.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -753,8 +647,6 @@
       "steppedLine": false,
       "targets": [
         {
-          "alias": "Humidity",
-          "dsType": "influxdb",
           "groupBy": [
             {
               "params": [
@@ -764,14 +656,15 @@
             },
             {
               "params": [
-                "previous"
+                "null"
               ],
               "type": "fill"
             }
           ],
-          "measurement": "humidity",
           "orderByTime": "ASC",
           "policy": "default",
+          "query": "from(bucket: \"nest_temperature_forwarder\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"humidity\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"mean\")",
+          "queryType": "randomWalk",
           "refId": "A",
           "resultFormat": "time_series",
           "select": [
@@ -834,7 +727,7 @@
     }
   ],
   "refresh": false,
-  "schemaVersion": 18,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [],
   "templating": {
@@ -844,9 +737,12 @@
         "auto_count": 200,
         "auto_min": "5m",
         "current": {
+          "selected": false,
           "text": "auto",
           "value": "$__auto_interval_sample"
         },
+        "description": null,
+        "error": null,
         "hide": 0,
         "label": null,
         "name": "sample",
@@ -916,6 +812,26 @@
         "refresh": 2,
         "skipUrlSync": false,
         "type": "interval"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "influxdb",
+          "value": "influxdb"
+        },
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "influxdb",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "datasource"
       }
     ]
   },
