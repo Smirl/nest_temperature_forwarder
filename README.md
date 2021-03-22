@@ -5,8 +5,21 @@ real-time graphs of temperature over time.
 
 ## Migrate from influxdb v1 to v2
 
+Backup v1 influxdb:
+
+```console
+kubectl exec -it influxdb -- bash
+> cd /tmp/
+> influxd backup -db nest_temperature_forwarder -portable backup-v1
+> tar -cvf backup-v1.tar.gz backup-v1/
+kubectl cp influxdb:/tmp/backup-v1.tar.gz ./backup-v1.tar.gz
+```
+
 You can use the `deploy/migrate.sh` script to migrate a influxdb v1 to a v2.
-When the browser opens rename the bucket.
+When the browser opens rename the bucket without `autogen`.
+
+A new backup named `backup-v2.tar.gz` will be available to restore a clean helm
+install from.
 
 
 ## Deployment
