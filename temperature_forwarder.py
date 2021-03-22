@@ -18,19 +18,19 @@ logger.addHandler(handler)
 
 def main():
     """Get the metrics, put them in the database, done."""
-    access_token = _get_secret("NEST_ACCESS_TOKEN")
-    influx_token = _get_secret("INFLUX_TOKEN")
+    nest_access_token = _get_secret("NEST_ACCESS_TOKEN")
     weatherunlocked_app_id = _get_secret("WEATHERUNLOCKED_APP_ID")
     weatherunlocked_app_key = _get_secret("WEATHERUNLOCKED_APP_KEY")
-    bucket = _get_secret("INFLUX_BUCKET", "nest_temperature_forwarder/autogen")
+    influx_token = _get_secret("INFLUX_TOKEN")
+    influx_url = _get_secret("INFLUX_URL", "http://localhost:8086")
+    influx_bucket = _get_secret("INFLUX_BUCKET", "nest_temperature_forwarder")
+    influx_org = _get_secret("INFLUX_ORG", "nest_temperature_forwarder")
 
-    client = InfluxDBClient(
-        url="http://localhost:8086", token=influx_token, org="smirl"
-    )
+    client = InfluxDBClient(url=influx_url, token=influx_token, org=influx_org,)
     write_api = client.write_api(write_options=SYNCHRONOUS)
 
     response = requests.get(
-        "https://developer-api.nest.com/", params={"auth": access_token}
+        "https://developer-api.nest.com/", params={"auth": nest_access_token}
     )
     response.raise_for_status()
     response = response.json()
@@ -43,7 +43,7 @@ def main():
         data = _parse_thermostat(thermostat)
         for metric_key, metric_value in data["metrics"].items():
             write_api.write(
-                bucket=bucket,
+                bucket=influx_bucket,
                 record={
                     "measurement": metric_key,
                     "tags": {"name": data["name"]},
@@ -52,7 +52,7 @@ def main():
                 },
             )
         write_api.write(
-            bucket=bucket,
+            bucket=influx_bucket,
             record={
                 "measurement": "thermostat_state",
                 "tags": {
@@ -70,9 +70,8 @@ def main():
             weather = get_weather(
                 postal_code, weatherunlocked_app_id, weatherunlocked_app_key
             )
-            logger.info("Logging weather")
             write_api.write(
-                bucket=bucket,
+                bucket=influx_bucket,
                 record={
                     "measurement": "weather",
                     "tags": {"name": data["name"]},
