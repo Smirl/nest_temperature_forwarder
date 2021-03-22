@@ -6,8 +6,8 @@ global:
   grafanaHost: grafana.smirlwebs.com
 
 image:
-  repository: registry.smirlwebs.com/smirl/nest_temperature_forwarder
-  tag: "2.0.0"
+  repository: ghcr.io/smirl/nest_temperature_forwarder
+  tag: "v2.0.0"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
