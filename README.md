@@ -3,6 +3,11 @@
 Forward your temperature statistics to a time series database so you can look at
 real-time graphs of temperature over time.
 
+## Migrate from influxdb v1 to v2
+
+You can use the `deploy/migrate.sh` script to migrate a influxdb v1 to a v2.
+When the browser opens rename the bucket.
+
 
 ## Deployment
 
