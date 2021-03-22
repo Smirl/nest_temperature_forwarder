@@ -1,0 +1,78 @@
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: {{ include "nest-temperature-forwarder.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "nest-temperature-forwarder.labels" . | nindent 4 }}
+spec:
+  concurrencyPolicy: Forbid
+  schedule: "{{ .Values.schedule }}"
+  successfulJobsHistoryLimit: 10
+  failedJobsHistoryLimit: 10
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 3000
+      template:
+        metadata:
+          labels:
+            {{- include "nest-temperature-forwarder.selectorLabels" . | nindent 12 }}
+        spec:
+          containers:
+          - name: {{ .Chart.Name }}
+            securityContext:
+              {{- toYaml .Values.securityContext | nindent 14 }}
+            image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
+            imagePullPolicy: {{ .Values.image.pullPolicy }}
+            command:
+              - python
+            args:
+              - /opt/code/temperature_forwarder.py
+            env:
+              - name: NEST_ACCESS_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: nest-temperature-forwarder
+                    key: nest_access_token
+              - name: WEATHERUNLOCKED_APP_ID
+                valueFrom:
+                  secretKeyRef:
+                    name: nest-temperature-forwarder
+                    key: weatherunlocked_app_id
+              - name: WEATHERUNLOCKED_APP_KEY
+                valueFrom:
+                  secretKeyRef:
+                    name: nest-temperature-forwarder
+                    key: weatherunlocked_app_key
+              - name: INFLUX_TOKEN
+                valueFrom:
+                  secretKeyRef:
+                    name: nest-temperature-forwarder
+                    key: admin-token
+            resources:
+              {{- toYaml .Values.resources | nindent 14 }}
+          restartPolicy: OnFailure
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          serviceAccountName: {{ include "nest-temperature-forwarder.serviceAccountName" . }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          volumes:
+          - name: nest-temperature-forwarder
+            secret:
+              secretName: {{ .Values.existingSecret }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}

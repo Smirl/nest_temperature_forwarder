@@ -1,0 +1,121 @@
+# Default values for nest-temperature-forwarder.
+
+global:
+  ingressClass: nginx
+  clusterIssuer: "letsencrypt-prod"
+  grafanaHost: grafana.smirlwebs.com
+
+image:
+  repository: registry.smirlwebs.com/smirl/nest_temperature_forwarder
+  tag: "2.0.0"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+schedule: "*/5 * * * *"
+
+# The name of the secret that is created with:
+# - NEST_ACCESS_TOKEN
+# - WEATHERUNLOCKED_APP_ID
+# - WEATHERUNLOCKED_APP_KEY
+existingSecret: nest-temperature-forwarder
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name:
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources: {}
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+
+grafana:
+  dashboards:
+    default:
+      home:
+        url: https://raw.githubusercontent.com/Smirl/nest_temperature_forwarder/master/grafana_dashboard.json
+
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: "{{ $.Values.global.ingressClass }}"
+      certmanager.k8s.io/cluster-issuer: "{{ $.Values.global.clusterIssuer }}"
+      certmanager.k8s.io/acme-challenge-type: http01
+    hosts:
+    - "{{ $.Values.global.grafanaHost }}"
+    tls:
+    - hosts:
+      - "{{ $.Values.global.grafanaHost }}"
+      secretName: grafana-tls
+
+  sidecar:
+    datasources:
+      enabled	: true
+      searchNamespace: nest
+
+  admin:
+    existingSecret: nest-temperature-forwarder
+
+  dashboardProviders:
+    dashboardproviders.yaml:
+      apiVersion: 1
+      providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: true
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+
+influxdb2:
+  # Change to docker hub version when available. (this chart needs some love)
+  # image:
+  #   repository: influxdb
+  persistence:
+    enabled: true
+    storageClass: "do-block-storage"
+    size: 2Gi
+    mountPath: /var/lib/influxdb2
+
+  adminUser:
+    create: true
+    organization: "nest_temperature_forwarder"
+    bucket: "nest_temperature_forwarder"
+    user: "admin"
+    retention_policy: "0s"
+    ## The password and token are obtained from an existing secret. The expected
+    ## keys are `admin-password` and `admin-token`.
+    ## If set, the password and token values above are ignored.
+    existingSecret: nest-temperature-forwarder
