@@ -1,9 +1,6 @@
-FROM python:3-alpine
-MAINTAINER smirlie@googlemail.com
-
+FROM python:3.9-alpine
 ADD . /opt/code
-
-RUN pip install -r /opt/code/requirements.txt && \
-	crontab -l | { cat; echo '*/5 * * * * python /opt/code/temperature_forwarder.py'; } | crontab -
-
-CMD ["crond", "-f"]
+RUN apk add --no-cache gcc musl-dev && \
+	pip install -r /opt/code/requirements.txt && \
+	apk del gcc musl-dev
+CMD ["python", "/opt/code/temperature_forwarder.py"]
