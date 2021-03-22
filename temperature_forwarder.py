@@ -5,27 +5,29 @@ import os
 import logging
 import logging.handlers
 
-from influxdb import InfluxDBClient
+from influxdb_client import InfluxDBClient
+from influxdb_client.client.write_api import SYNCHRONOUS
 import requests
 
 
 logger = logging.getLogger(__file__)
 logger.setLevel(logging.INFO)
-handler = logging.handlers.RotatingFileHandler(
-    "/var/log/tempforw.log", maxBytes=50000, backupCount=1
-)
-handler.setLevel(logging.INFO)
-logger.addHandler(handler)
 handler = logging.StreamHandler()
 logger.addHandler(handler)
 
 
 def main():
     """Get the metrics, put them in the database, done."""
-    access_token = _get_secret("nest_access_token")
-    influx_password = _get_secret("influxdb_write_user_password", "writer")
-    weatherunlocked_app_id = _get_secret("weatherunlocked_app_id")
-    weatherunlocked_app_key = _get_secret("weatherunlocked_app_key")
+    access_token = _get_secret("NEST_ACCESS_TOKEN")
+    influx_token = _get_secret("INFLUX_TOKEN")
+    weatherunlocked_app_id = _get_secret("WEATHERUNLOCKED_APP_ID")
+    weatherunlocked_app_key = _get_secret("WEATHERUNLOCKED_APP_KEY")
+    bucket = _get_secret("INFLUX_BUCKET", "nest_temperature_forwarder/autogen")
+
+    client = InfluxDBClient(
+        url="http://localhost:8086", token=influx_token, org="smirl"
+    )
+    write_api = client.write_api(write_options=SYNCHRONOUS)
 
     response = requests.get(
         "https://developer-api.nest.com/", params={"auth": access_token}
@@ -35,22 +37,23 @@ def main():
 
     structures = _get_structures(response)
 
-    metrics = []
     postal_codes = set()
 
     for thermostat in response["devices"]["thermostats"].values():
         data = _parse_thermostat(thermostat)
         for metric_key, metric_value in data["metrics"].items():
-            metrics.append(
-                {
+            write_api.write(
+                bucket=bucket,
+                record={
                     "measurement": metric_key,
-                    "tags": {"name": data["name"],},
+                    "tags": {"name": data["name"]},
                     "time": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "fields": {"value": metric_value},
-                }
+                },
             )
-        metrics.append(
-            {
+        write_api.write(
+            bucket=bucket,
+            record={
                 "measurement": "thermostat_state",
                 "tags": {
                     "name": data["name"],
@@ -59,7 +62,7 @@ def main():
                 },
                 "time": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "fields": {"value": 1},
-            }
+            },
         )
 
         postal_code = structures[data["structure_id"]]["postal_code"]
@@ -67,25 +70,22 @@ def main():
             weather = get_weather(
                 postal_code, weatherunlocked_app_id, weatherunlocked_app_key
             )
-            metrics.append(
-                {
+            logger.info("Logging weather")
+            write_api.write(
+                bucket=bucket,
+                record={
                     "measurement": "weather",
-                    "tags": {"name": data["name"],},
+                    "tags": {"name": data["name"]},
                     "time": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
                     "fields": weather,
-                }
+                },
             )
             postal_codes.add(postal_code)
-
-    client = InfluxDBClient(
-        "influxdb", 8086, "writer", influx_password, "nest_temperature_forwarder"
-    )
-    client.write_points(metrics)
 
 
 def _get_secret(name, default=""):
     """Return the given secret or the default."""
-    if name.upper() in os.environ:
+    if name in os.environ:
         return os.environ[name]
     path = "/run/secrets/{name}".format(name=name)
     if os.path.exists(path):
@@ -135,7 +135,7 @@ def get_weather(postal_code, app_id, app_key):
     """Call the weather unlocked API for the given postal_code."""
     response = requests.get(
         "http://api.weatherunlocked.com/api/current/uk.{0}".format(postal_code),
-        params={"app_id": app_id, "app_key": app_key,},
+        params={"app_id": app_id, "app_key": app_key},
     )
     response.raise_for_status()
     response = response.json()
