@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "iteration": 1616455318958,
+  "iteration": 1616492607197,
   "links": [],
   "panels": [
     {
@@ -140,7 +140,7 @@
           "hide": true,
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "from(bucket: \"nest_temperature_forwarder\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"ambient_temperature_c\" or r[\"_measurement\"] == \"target_temperature_c\" or r[\"_measurement\"] == \"weather\" or r[\"_measurement\"] == \"eco_temperature_low_c\")\n  |> filter(fn: (r) => r[\"name\"] == \"Living Room\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\" or r[\"_field\"] == \"temp_c\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)\n  |> yield(name: \"mean\")",
+          "query": "from(bucket: \"nest_temperature_forwarder\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"ambient_temperature_c\" or r[\"_measurement\"] == \"target_temperature_c\" or r[\"_measurement\"] == \"weather\" or r[\"_measurement\"] == \"eco_temperature_low_c\")\n  |> filter(fn: (r) => r[\"name\"] == \"Living Room\")\n  |> filter(fn: (r) => r[\"_field\"] == \"value\" or r[\"_field\"] == \"temp_c\")\n  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)\n  |> yield(name: \"max\")",
           "queryType": "randomWalk",
           "refId": "A",
           "resultFormat": "time_series",
@@ -178,7 +178,7 @@
           "hide": false,
           "orderByTime": "ASC",
           "policy": "default",
-          "query": "from(bucket: \"nest_temperature_forwarder\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"thermostat_state\")\n  |> group(columns: [\"hvac_mode\", \"hvac_state\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)\n  |> yield(name: \"mean\")",
+          "query": "from(bucket: \"nest_temperature_forwarder\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r[\"_measurement\"] == \"thermostat_state\")\n  |> group(columns: [\"hvac_mode\", \"hvac_state\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)\n  |> yield(name: \"max\")",
           "refId": "B",
           "resultFormat": "time_series",
           "select": [
