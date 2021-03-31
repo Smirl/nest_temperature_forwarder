@@ -58,6 +58,12 @@ jobs:
           k8s-url: ${{ secrets.K8S_URL }}
           k8s-secret: ${{ secrets.K8S_SECRET }}
 
+      - name: Helm repo add influxdata
+        run: helm repo add influxdata https://helm.influxdata.com/ 
+
+      - name: Helm repo add grafana
+        run: helm repo add grafana https://grafana.github.io/helm-charts
+
       - name: Get helm dependencies
         run: helm dependency build deploy/nest-temperature-forwarder/
 
