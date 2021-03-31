@@ -15,6 +15,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      # PUBLISH
       - name: Docker meta
         id: docker_meta
         uses: crazy-max/ghaction-docker-meta@v1
@@ -41,3 +42,21 @@ jobs:
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
+
+      # DEPLOY
+      - name: Get tag name
+        uses: olegtarasov/get-tag@v2.1
+
+      - name: Helm tool installer
+        uses: Azure/setup-helm@v1
+        with:
+          version: '3.2.4'
+          
+      - uses: azure/k8s-set-context@v1
+        with:
+          method: service-account
+          k8s-url: ${{ secrets.K8S_URL }}
+          k8s-secret: ${{ secrets.K8S_SECRET }}
+
+      - name: Deploy
+        run: helm upgrade --install nest ./deploy/nest-temperature-forwarder/ --namespace nest --set version=$GIT_TAG_NAME
