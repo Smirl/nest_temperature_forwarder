@@ -58,5 +58,8 @@ jobs:
           k8s-url: ${{ secrets.K8S_URL }}
           k8s-secret: ${{ secrets.K8S_SECRET }}
 
+      - name: Get helm dependencies
+        run: helm dependency build deploy/nest-temperature-forwarder/
+
       - name: Deploy
-        run: helm upgrade --install nest ./deploy/nest-temperature-forwarder/ --namespace nest --set version=$GIT_TAG_NAME
+        run: helm upgrade --install nest ./deploy/nest-temperature-forwarder/ --namespace nest --set image.tag=$GIT_TAG_NAME
