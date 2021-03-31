@@ -34,6 +34,10 @@ kubectl exec -it influxdb -- bash
 
 ## Deployment
 
+Github Actions are triggered to build and deploy the app on release. Release
+Drafter is used to draft releases based on pull request titles. A service
+account is used to deploy via helm3. This must be created first.
+
 ### `nest_temperature_forwarder` Secret
 
 ```yaml
@@ -80,8 +84,19 @@ stringData:
           defaultBucket: nest_temperature_forwarder
 ```
 
-### Install helm chart (Manually)
+### Github Actions Setup
+
+To create the service account and permissions, a cluster-admin needs to apply
+the following:
 
 ```console
-helm install nest deploy/nest_temperature_forwarder/ -n nest
+kubectl apply -f deploy/serviceaccount.yaml
 ```
+
+[Secrets][github-actions-secrets] for github actions are as follows:
+
+- `DOCKER_TOKEN`: _The PAT token for ghcr.io_
+- `K8S_SECRET`: _The full yaml secret for the serviceaccount_
+- `K8S_URL` : _The url of the kubernetes api server_
+
+[github-actions-secrets]: https://github.com/Smirl/nest_temperature_forwarder/settings/secrets
