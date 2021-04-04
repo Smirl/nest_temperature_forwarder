@@ -1,7 +1,6 @@
 # Custom
 influxdb/
 grafana/
-deploy/nest-temperature-forwarder/charts/
 deploy/secret.yaml
 deploy/datasources.yaml
 
