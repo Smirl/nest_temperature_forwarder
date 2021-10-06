@@ -1,0 +1,99 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nest-temperature-forwarder.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "nest-temperature-forwarder.labels" . | nindent 4 }}
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      {{- include "nest-temperature-forwarder.selectorLabels" . | nindent 6 }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+    template:
+      metadata:
+        labels:
+          {{- include "nest-temperature-forwarder.selectorLabels" . | nindent 10 }}
+      spec:
+        containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+          args:
+            - /opt/code/temperature_forwarder.py
+            - --health-check-path={{ .Values.healthCheck.path }}
+          {{- if .Values.healthCheck.enabled }}
+          livenessProbe:
+            exec:
+              command:
+              - python
+              - /opt/code/temperature_forwarder.py
+              - --health-check
+              - --health-check-delta={{ .Values.healthCheck.delta }}
+              - --health-check-path={{ .Values.healthCheck.path }}
+            failureThreshold: 3
+            periodSeconds: 60
+            successThreshold: 1
+            timeoutSeconds: 1
+          {{- end }}
+          env:
+            - name: NEST_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: nest-temperature-forwarder
+                  key: nest_access_token
+            - name: WEATHERUNLOCKED_APP_ID
+              valueFrom:
+                secretKeyRef:
+                  name: nest-temperature-forwarder
+                  key: weatherunlocked_app_id
+            - name: WEATHERUNLOCKED_APP_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: nest-temperature-forwarder
+                  key: weatherunlocked_app_key
+            - name: INFLUX_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: nest-temperature-forwarder
+                  key: admin-token
+            - name: INFLUX_URL
+              value: "http://{{ .Release.Name }}-influxdb2.{{ .Release.Namespace}}.svc.cluster.local:80"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+        restartPolicy: OnFailure
+        {{- with .Values.imagePullSecrets }}
+        imagePullSecrets:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        serviceAccountName: {{ include "nest-temperature-forwarder.serviceAccountName" . }}
+        securityContext:
+          {{- toYaml .Values.podSecurityContext | nindent 10 }}
+        volumes:
+        - name: nest-temperature-forwarder
+          secret:
+            secretName: {{ .Values.existingSecret }}
+        {{- with .Values.nodeSelector }}
+        nodeSelector:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.affinity }}
+        affinity:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.tolerations }}
+        tolerations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}

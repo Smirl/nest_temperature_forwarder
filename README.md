@@ -31,6 +31,49 @@ kubectl exec -it influxdb -- bash
 > influx restore --full backup-v2/
 ```
 
+## Cronjob or Deployment
+
+Older versions of `nest_temperature_forwarder` ran as a kubernetes cronjob.
+It now runs as a deployment with a scheduler in python code. This is to save
+pod churn on smaller kubernetes clusters.
+
+When running as a cronjob make sure to add `--once`.
+
+## Usage
+
+Usually `nest_temperature_forwarder` should be run in a kubernetes cluster.
+However it can be run in any environment using environment variables and flags
+to configure it.
+
+### Flags
+
+```
+usage: python temperature_forwarder.py [-h] [--health-check] [--health-check-path HEALTH_CHECK_PATH] [--health-check-delta HEALTH_CHECK_DELTA] [--once]
+
+Get metrics from the nest API and put them into influxdb.
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --health-check        Do get metrics by check last data point witin range (default: False)
+  --health-check-path HEALTH_CHECK_PATH
+                        Path on disk to store last successful run time (default: /tmp/healh_check.txt)
+  --health-check-delta HEALTH_CHECK_DELTA
+                        Number of minutes behind before failing healthcheck (default: 20)
+  --once                Do not start scheduler. Get and store single data point (default: False)
+```
+
+### Environment variables
+
+| Name | Description | Default |
+| - | - | - |
+| `DELAY_SECONDS` | Seconds between data points | 300 |
+| `NEST_ACCESS_TOKEN` | API token for nest | |
+| `WEATHERUNLOCKED_APP_ID` | App ID for weatherunlocked | |
+| `WEATHERUNLOCKED_APP_KEY` | App ID for weatherunlocked | |
+| `INFLUX_TOKEN` | API token for influxdb | |
+| `INFLUX_URL` | influxdb full url | http://localhost:8086 |
+| `INFLUX_BUCKET` | influxdb bucket name | nest_temperature_forwarder |
+| `INFLUX_ORG` | influxdb organization name | nest_temperature_forwarder |
 
 ## Deployment
 
