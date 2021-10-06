@@ -14,7 +14,10 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-schedule: "*/5 * * * *"
+healthCheck:
+  enabled: true
+  path: /tmp/health-check.txt  # path to store last successful date time
+  delta: 20  # number of minutes since last check before liveness fails
 
 # The name of the secret that is created with:
 # - NEST_ACCESS_TOKEN
