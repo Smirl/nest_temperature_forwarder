@@ -9,7 +9,7 @@ metadata:
 spec:
   progressDeadlineSeconds: 600
   replicas: 1
-  revisionHistoryLimit: 10
+  revisionHistoryLimit: 1
   selector:
     matchLabels:
       {{- include "nest-temperature-forwarder.selectorLabels" . | nindent 6 }}
@@ -23,7 +23,6 @@ spec:
       labels:
         {{- include "nest-temperature-forwarder.selectorLabels" . | nindent 8 }}
     spec:
-      revisionHistoryLimit: 1
       containers:
       - name: {{ .Chart.Name }}
         securityContext:
