@@ -23,6 +23,7 @@ spec:
       labels:
         {{- include "nest-temperature-forwarder.selectorLabels" . | nindent 8 }}
     spec:
+      revisionHistoryLimit: 1
       containers:
       - name: {{ .Chart.Name }}
         securityContext:
