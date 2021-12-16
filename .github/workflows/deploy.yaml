@@ -46,6 +46,13 @@ jobs:
           push: true
           tags: ${{ steps.docker_meta.outputs.tags }}
           labels: ${{ steps.docker_meta.outputs.labels }}
+  deploy:
+    runs-on: ubuntu-latest
+    needs:
+      - docker
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
       # DEPLOY
       - name: Get tag name
@@ -61,15 +68,6 @@ jobs:
           method: service-account
           k8s-url: ${{ secrets.K8S_URL }}
           k8s-secret: ${{ secrets.K8S_SECRET }}
-
-      # - name: Helm repo add influxdata
-      #   run: helm repo add influxdata https://helm.influxdata.com/
-
-      # - name: Helm repo add grafana
-      #   run: helm repo add grafana https://grafana.github.io/helm-charts
-
-      # - name: Get helm dependencies
-      #   run: helm dependency build deploy/nest-temperature-forwarder/
 
       - name: Deploy
         run: helm upgrade --install nest ./deploy/nest-temperature-forwarder/ --namespace nest --set image.tag=$GIT_TAG_NAME
