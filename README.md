@@ -48,7 +48,7 @@ to configure it.
 ### Flags
 
 ```
-usage: python temperature_forwarder.py [-h] [--health-check] [--health-check-path HEALTH_CHECK_PATH] [--health-check-delta HEALTH_CHECK_DELTA] [--postal-code POSTAL_CODE] [--delay-seconds DELAY_SECONDS] [--once] [--verbose]
+usage: python temperature_forwarder.py [-h] [--health-check] [--health-check-path HEALTH_CHECK_PATH] [--health-check-delta HEALTH_CHECK_DELTA] [--delay-seconds DELAY_SECONDS] [--once] [--verbose]
 
 Get metrics from the nest API and put them into influxdb.
 
@@ -59,8 +59,6 @@ optional arguments:
                         Path on disk to store last successful run time (default: /tmp/healh_check.txt)
   --health-check-delta HEALTH_CHECK_DELTA
                         Number of minutes behind before failing healthcheck (default: 20)
-  --postal-code POSTAL_CODE
-                        A UK postal code to always get weather data for. Uses nest thermostat postal code by default. (default: None)
   --delay-seconds DELAY_SECONDS
                         Seconds between data points (default: 300)
   --once                Do not start scheduler. Get and store single data point (default: False)
