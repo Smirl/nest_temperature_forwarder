@@ -7,7 +7,7 @@ global:
 
 image:
   repository: ghcr.io/smirl/nest_temperature_forwarder
-  tag: "v2.0.0"
+  tag: "v4.0.0"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
@@ -23,6 +23,11 @@ healthCheck:
 # - NEST_ACCESS_TOKEN
 # - OPENWEATHERMAP_API_KEY
 existingSecret: nest-temperature-forwarder
+
+args:
+  delaySeconds: 300
+  postalCode: ""
+  verbose: false
 
 serviceAccount:
   # Specifies whether a service account should be created
