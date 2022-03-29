@@ -35,9 +35,6 @@ spec:
           - /opt/code/temperature_forwarder.py
           - --health-check-path={{ .Values.healthCheck.path }}
           - --delay-seconds={{ .Values.args.delaySeconds }}
-          {{- with .Values.args.postalCode }}
-          - --postal-code={{ . }}
-          {{- end }}
           {{- with .Values.args.verbose }}
           - --verbose
           {{- end }}
@@ -61,16 +58,25 @@ spec:
               secretKeyRef:
                 name: nest-temperature-forwarder
                 key: nest_access_token
+                optional: true
           - name: OPENWEATHERMAP_API_KEY
             valueFrom:
               secretKeyRef:
                 name: nest-temperature-forwarder
                 key: openweathermap_api_key
+                optional: true
           - name: INFLUX_TOKEN
             valueFrom:
               secretKeyRef:
                 name: nest-temperature-forwarder
                 key: admin-token
+                optional: true
+          - name: POSTAL_CODE
+            valueFrom:
+              secretKeyRef:
+                name: nest-temperature-forwarder
+                key: postal_code
+                optional: true
           - name: INFLUX_URL
             value: "http://{{ .Release.Name }}-influxdb2.{{ .Release.Namespace}}.svc.cluster.local:80"
           - name: PYTHONUNBUFFERED
