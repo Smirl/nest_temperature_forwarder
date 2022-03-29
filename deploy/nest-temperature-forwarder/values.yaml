@@ -26,7 +26,6 @@ existingSecret: nest-temperature-forwarder
 
 args:
   delaySeconds: 300
-  postalCode: ""
   verbose: false
 
 serviceAccount:
