@@ -22,8 +22,7 @@ def main(health_check_path: str, once: bool):
 
     delay_seconds = int(_get_secret("DELAY_SECONDS", 5 * 60))
     nest_access_token = _get_secret("NEST_ACCESS_TOKEN")
-    weatherunlocked_app_id = _get_secret("WEATHERUNLOCKED_APP_ID")
-    weatherunlocked_app_key = _get_secret("WEATHERUNLOCKED_APP_KEY")
+    openweathermap_api_key = _get_secret("OPENWEATHERMAP_API_KEY")
     influx_token = _get_secret("INFLUX_TOKEN")
     influx_url = _get_secret("INFLUX_URL", "http://localhost:8086")
     influx_bucket = _get_secret("INFLUX_BUCKET", "nest_temperature_forwarder")
@@ -44,8 +43,7 @@ def main(health_check_path: str, once: bool):
             influx_bucket,
             health_check_path,
             nest_access_token,
-            weatherunlocked_app_id,
-            weatherunlocked_app_key,
+            openweathermap_api_key,
         )
         s.enter(delay_seconds, 1, do)
 
@@ -65,10 +63,9 @@ def add_data_point(
     influx_bucket: str,
     health_check_path: str,
     nest_access_token: str,
-    weatherunlocked_app_id: str,
-    weatherunlocked_app_key: str,
+    openweathermap_api_key: str,
 ) -> Set[str]:
-    """Add a data point from nest thermostats and return the postal codes they are in."""
+    """Add a data point from nest thermostats & return the postal codes they are in."""
     response = requests.get(
         "https://developer-api.nest.com/", params={"auth": nest_access_token}
     )
@@ -113,7 +110,8 @@ def add_data_point(
         postal_code = structures[data["structure_id"]]["postal_code"]
         if postal_code not in postal_codes:
             weather = get_weather(
-                postal_code, weatherunlocked_app_id, weatherunlocked_app_key
+                postal_code,
+                openweathermap_api_key,
             )
             write_api.write(
                 bucket=influx_bucket,
@@ -134,7 +132,7 @@ def add_data_point(
 
 
 def health_check(health_check_path: str, delta: timedelta):
-    """Read the last successful data collection from disk and error if not within range."""
+    """Read the last successful data collection from disk & error if not in range."""
     if not os.path.exists(health_check_path):
         # never added a point, pod might be new
         _log(health="skip")
@@ -201,15 +199,25 @@ def _parse_thermostat(thermostat):
     }
 
 
-def get_weather(postal_code, app_id, app_key):
+def get_weather(postal_code, api_key):
     """Call the weather unlocked API for the given postal_code."""
+    # It works best if we just get the first part of the post code
     response = requests.get(
-        "http://api.weatherunlocked.com/api/current/uk.{0}".format(postal_code),
-        params={"app_id": app_id, "app_key": app_key},
+        "https://api.openweathermap.org/data/2.5/weather",
+        params={
+            "zip": f"{postal_code.strip().split(' ')[0][4:]},gb",
+            "appid": api_key,
+            "units": "metric",
+            "mode": "json",
+            "lang": "en",
+        },
     )
     response.raise_for_status()
     response = response.json()
-    return {"temp_c": response["temp_c"], "feelslike_c": response["feelslike_c"]}
+    return {
+        "temp_c": response["main"]["temp"],
+        "feelslike_c": response["main"]["feels_like"],
+    }
 
 
 def _log(obj=None, now=None, **kwargs):

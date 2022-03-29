@@ -21,8 +21,7 @@ healthCheck:
 
 # The name of the secret that is created with:
 # - NEST_ACCESS_TOKEN
-# - WEATHERUNLOCKED_APP_ID
-# - WEATHERUNLOCKED_APP_KEY
+# - OPENWEATHERMAP_API_KEY
 existingSecret: nest-temperature-forwarder
 
 serviceAccount:

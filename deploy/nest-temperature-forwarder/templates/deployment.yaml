@@ -54,16 +54,11 @@ spec:
               secretKeyRef:
                 name: nest-temperature-forwarder
                 key: nest_access_token
-          - name: WEATHERUNLOCKED_APP_ID
+          - name: OPENWEATHERMAP_API_KEY
             valueFrom:
               secretKeyRef:
                 name: nest-temperature-forwarder
-                key: weatherunlocked_app_id
-          - name: WEATHERUNLOCKED_APP_KEY
-            valueFrom:
-              secretKeyRef:
-                name: nest-temperature-forwarder
-                key: weatherunlocked_app_key
+                key: openweathermap_api_key
           - name: INFLUX_TOKEN
             valueFrom:
               secretKeyRef:

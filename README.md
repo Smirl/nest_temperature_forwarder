@@ -68,8 +68,7 @@ optional arguments:
 | - | - | - |
 | `DELAY_SECONDS` | Seconds between data points | 300 |
 | `NEST_ACCESS_TOKEN` | API token for nest | |
-| `WEATHERUNLOCKED_APP_ID` | App ID for weatherunlocked | |
-| `WEATHERUNLOCKED_APP_KEY` | App ID for weatherunlocked | |
+| `OPENWEATHERMAP_API_KEY` | API Key for https://openweathermap.org/ | |
 | `INFLUX_TOKEN` | API token for influxdb | |
 | `INFLUX_URL` | influxdb full url | http://localhost:8086 |
 | `INFLUX_BUCKET` | influxdb bucket name | nest_temperature_forwarder |
@@ -92,8 +91,7 @@ metadata:
   namespace: nest
 stringData:
   nest_access_token: ""
-  weatherunlocked_app_id: ""
-  weatherunlocked_app_key: ""
+  openweathermap_api_key: ""
   # Admin user used for both influx and grafana
   admin-user: "admin"
   admin-password: ""
