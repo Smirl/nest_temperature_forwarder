@@ -48,7 +48,7 @@ to configure it.
 ### Flags
 
 ```
-usage: python temperature_forwarder.py [-h] [--health-check] [--health-check-path HEALTH_CHECK_PATH] [--health-check-delta HEALTH_CHECK_DELTA] [--once]
+usage: python temperature_forwarder.py [-h] [--health-check] [--health-check-path HEALTH_CHECK_PATH] [--health-check-delta HEALTH_CHECK_DELTA] [--delay-seconds DELAY_SECONDS] [--once] [--verbose]
 
 Get metrics from the nest API and put them into influxdb.
 
@@ -59,17 +59,20 @@ optional arguments:
                         Path on disk to store last successful run time (default: /tmp/healh_check.txt)
   --health-check-delta HEALTH_CHECK_DELTA
                         Number of minutes behind before failing healthcheck (default: 20)
+  --delay-seconds DELAY_SECONDS
+                        Seconds between data points (default: 300)
   --once                Do not start scheduler. Get and store single data point (default: False)
+  --verbose             Enable verbose output (default: False)
 ```
 
 ### Environment variables
 
 | Name | Description | Default |
 | - | - | - |
-| `DELAY_SECONDS` | Seconds between data points | 300 |
-| `NEST_ACCESS_TOKEN` | API token for nest | |
-| `OPENWEATHERMAP_API_KEY` | API Key for https://openweathermap.org/ | |
-| `INFLUX_TOKEN` | API token for influxdb | |
+| `POSTAL_CODE` | A UK postal code to always get weather data for. Uses nest thermostat postal code by default. | "" |
+| `NEST_ACCESS_TOKEN` | API token for nest. If blank nest api not queried. | "" |
+| `OPENWEATHERMAP_API_KEY` | API Key for https://openweathermap.org/. If blank not external temperature data is logged. | "" |
+| `INFLUX_TOKEN` | API token for influxdb. If logged, output is only to stdout. | "" |
 | `INFLUX_URL` | influxdb full url | http://localhost:8086 |
 | `INFLUX_BUCKET` | influxdb bucket name | nest_temperature_forwarder |
 | `INFLUX_ORG` | influxdb organization name | nest_temperature_forwarder |

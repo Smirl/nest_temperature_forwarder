@@ -1,47 +1,63 @@
 """Get metrics from the nest API and put them into influxdb."""
 
 import json
+import logging
 import os
 import sys
 import time
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 from datetime import datetime, timedelta
+from operator import truth
 from sched import scheduler
-from typing import Set
+from typing import Optional, Set
 
 import requests
 from influxdb_client import InfluxDBClient, WriteApi
 from influxdb_client.client.write_api import SYNCHRONOUS
 
-HEALTH_CHECK_PATH = "/tmp/healh_check.txt"
 DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
+HEALTH_CHECK_PATH = "/tmp/healh_check.txt"
+LOG_LEVEL = logging.INFO
+NO_DEFAULT = object()
 
 
-def main(health_check_path: str, once: bool):
+def main(health_check_path: str, once: bool, delay_seconds: int):
     """Get the metrics, put them in the database, done."""
-
-    delay_seconds = int(_get_secret("DELAY_SECONDS", 5 * 60))
-    nest_access_token = _get_secret("NEST_ACCESS_TOKEN")
-    openweathermap_api_key = _get_secret("OPENWEATHERMAP_API_KEY")
-    influx_token = _get_secret("INFLUX_TOKEN")
+    postal_code = _get_secret("POSTAL_CODE", "")
+    nest_access_token = _get_secret("NEST_ACCESS_TOKEN", "")
+    openweathermap_api_key = _get_secret("OPENWEATHERMAP_API_KEY", "")
+    influx_token = _get_secret("INFLUX_TOKEN", "")
     influx_url = _get_secret("INFLUX_URL", "http://localhost:8086")
     influx_bucket = _get_secret("INFLUX_BUCKET", "nest_temperature_forwarder")
     influx_org = _get_secret("INFLUX_ORG", "nest_temperature_forwarder")
 
-    client = InfluxDBClient(
-        url=influx_url,
-        token=influx_token,
-        org=influx_org,
+    if influx_token:
+        client = InfluxDBClient(
+            url=influx_url,
+            token=influx_token,
+            org=influx_org,
+        )
+        write_api = client.write_api(write_options=SYNCHRONOUS)
+    else:
+        write_api = None
+
+    _log(
+        delay_seconds=delay_seconds,
+        postal_code=postal_code,
+        use_influx=truth(write_api),
+        use_nest=truth(nest_access_token),
+        use_weather=truth(openweathermap_api_key),
+        level=logging.DEBUG,
     )
-    write_api = client.write_api(write_options=SYNCHRONOUS)
 
     s = scheduler(time.time, time.sleep)
 
     def do():
-        add_data_point(
+        add_data_points(
             write_api,
             influx_bucket,
             health_check_path,
+            postal_code,
             nest_access_token,
             openweathermap_api_key,
         )
@@ -58,77 +74,46 @@ def main(health_check_path: str, once: bool):
             _log(shutting_down="true")
 
 
-def add_data_point(
-    write_api: WriteApi,
+def add_data_points(
+    write_api: Optional[WriteApi],
     influx_bucket: str,
     health_check_path: str,
+    postal_code: str,
     nest_access_token: str,
     openweathermap_api_key: str,
-) -> Set[str]:
+):
     """Add a data point from nest thermostats & return the postal codes they are in."""
-    response = requests.get(
-        "https://developer-api.nest.com/", params={"auth": nest_access_token}
-    )
-    response.raise_for_status()
-    response = response.json()
-
-    structures = _get_structures(response)
-
+    records = []
     postal_codes = set()
+
+    # If any "hard coded" postal codes we add them now
+    if postal_code:
+        postal_codes.add(postal_code)
+
+    # Get nest data
+    if nest_access_token:
+        _log({"message": "calling nest api"}, level=logging.DEBUG)
+        nest_records, nest_postal_codes = get_nest_records(nest_access_token)
+        records.extend(nest_records)
+        postal_codes |= nest_postal_codes
+
+    # Get weather for all postcodes
+    if openweathermap_api_key:
+        _log(message="calling openweathermap api", level=logging.DEBUG)
+        weather_records = get_weather_records(postal_codes, openweathermap_api_key)
+        records.extend(weather_records)
+
+    # Write all records to influxdb
     now = datetime.utcnow().strftime(DATETIME_FORMAT)
+    if write_api:
+        _log(message="trying to write to influxdb", level=logging.DEBUG)
+        for record in records:
+            write_api.write(bucket=influx_bucket, record=dict(time=now, **record))
+        _log(message=f"wrote {len(records)} records", level=logging.DEBUG)
 
-    for thermostat in response["devices"]["thermostats"].values():
-        data = _parse_thermostat(thermostat)
-        for metric_key, metric_value in data["metrics"].items():
-            write_api.write(
-                bucket=influx_bucket,
-                record={
-                    "measurement": metric_key,
-                    "tags": {"name": data["name"]},
-                    "time": now,
-                    "fields": {"value": metric_value},
-                },
-            )
-        write_api.write(
-            bucket=influx_bucket,
-            record={
-                "measurement": "thermostat_state",
-                "tags": {
-                    "name": data["name"],
-                    "hvac_mode": data["state"]["hvac_mode"],
-                    "hvac_state": data["state"]["hvac_state"],
-                },
-                "time": now,
-                "fields": {"value": 1},
-            },
-        )
-        # A cleaner dict for logging
-        log_info = dict(**data)
-        log_info.pop("structure_id")
-        log_info["state"].pop("is_using_emergency_heat")
-
-        postal_code = structures[data["structure_id"]]["postal_code"]
-        if postal_code not in postal_codes:
-            weather = get_weather(
-                postal_code,
-                openweathermap_api_key,
-            )
-            write_api.write(
-                bucket=influx_bucket,
-                record={
-                    "measurement": "weather",
-                    "tags": {"name": data["name"]},
-                    "time": now,
-                    "fields": weather,
-                },
-            )
-            log_info["weather"] = weather
-            postal_codes.add(postal_code)
-
-        # write the time of the last data point written to disk
-        with open(health_check_path, "w") as f:
-            f.write(now)
-        _log(log_info)
+    # write the time of the last data point written to disk
+    with open(health_check_path, "w") as f:
+        f.write(now)
 
 
 def health_check(health_check_path: str, delta: timedelta):
@@ -155,11 +140,11 @@ def health_check(health_check_path: str, delta: timedelta):
         _log(health="true")
 
 
-def _get_secret(name, default=""):
+def _get_secret(name, default=NO_DEFAULT):
     """Return the given secret or the default."""
     if name in os.environ:
         return os.environ[name]
-    elif default:
+    elif default is not NO_DEFAULT:
         return default
     else:
         raise Exception(f"Missing secret {name}")
@@ -199,32 +184,95 @@ def _parse_thermostat(thermostat):
     }
 
 
-def get_weather(postal_code, api_key):
-    """Call the weather unlocked API for the given postal_code."""
-    # It works best if we just get the first part of the post code
+def get_nest_records(nest_access_token: str):
+    """
+    Call the nest api to get temperature and state records.
+
+    Return records to be written to influxdb and found postal codes.
+    """
+    records = []
+    postal_codes = set()
+
+    # Request the "soon to be deprecated" nest api
     response = requests.get(
-        "https://api.openweathermap.org/data/2.5/weather",
-        params={
-            "zip": f"{postal_code.strip().split(' ')[0][4:]},gb",
-            "appid": api_key,
-            "units": "metric",
-            "mode": "json",
-            "lang": "en",
-        },
+        "https://developer-api.nest.com/", params={"auth": nest_access_token}
     )
     response.raise_for_status()
     response = response.json()
-    return {
-        "temp_c": response["main"]["temp"],
-        "feelslike_c": response["main"]["feels_like"],
-    }
+    structures = _get_structures(response)
+
+    # For each thermostat, get the records for temperature and state
+    for thermostat in response["devices"]["thermostats"].values():
+        data = _parse_thermostat(thermostat)
+        for metric_key, metric_value in data["metrics"].items():
+            records.append(
+                {
+                    "measurement": metric_key,
+                    "tags": {"name": data["name"]},
+                    "fields": {"value": metric_value},
+                }
+            )
+        records.append(
+            {
+                "measurement": "thermostat_state",
+                "tags": {
+                    "name": data["name"],
+                    "hvac_mode": data["state"]["hvac_mode"],
+                    "hvac_state": data["state"]["hvac_state"],
+                },
+                "fields": {"value": 1},
+            }
+        )
+
+        # A cleaner dict for logging
+        log_info = dict(**data)
+        log_info.pop("structure_id")
+        log_info["state"].pop("is_using_emergency_heat")
+        _log(log_info)  # log raw data as json
+
+        # Add postal_code to get weather information
+        postal_code = structures[data["structure_id"]]["postal_code"]
+        postal_codes.add(postal_code)
+
+    return records, postal_codes
 
 
-def _log(obj=None, now=None, **kwargs):
+def get_weather_records(postal_codes: Set[str], api_key: str):
+    """Call the weather unlocked API for the given postal_codes."""
+    for postal_code in postal_codes:
+        # It works best if we just get the first part of the post code
+        code = postal_code.strip().split(' ')[0][:4]
+        _log(message=f"using postal code {code}", level=logging.DEBUG)
+        response = requests.get(
+            "https://api.openweathermap.org/data/2.5/weather",
+            params={
+                "zip": f"{code},gb",
+                "appid": api_key,
+                "units": "metric",
+                "mode": "json",
+                "lang": "en",
+            },
+        )
+        response.raise_for_status()
+        response = response.json()
+        weather = {
+            "temp_c": response["main"]["temp"],
+            "feelslike_c": response["main"]["feels_like"],
+        }
+        _log(weather)
+        yield {
+            "measurement": "weather",
+            "tags": {"postal_code": postal_code},
+            "fields": weather,
+        }
+
+
+def _log(obj=None, now=None, level=logging.INFO, **kwargs):
     """A simple json logger."""
-    obj = obj if obj else {}
-    now = now if now else datetime.utcnow().strftime(DATETIME_FORMAT)
-    print(json.dumps(dict({"time": now}, **obj, **kwargs)))  # put time first
+    if level >= LOG_LEVEL:
+        obj = obj if obj else {}
+        now = now if now else datetime.utcnow().strftime(DATETIME_FORMAT)
+        print(json.dumps(dict({"time": now}, **obj, **kwargs)))  # put time first
 
 
 if __name__ == "__main__":
@@ -250,14 +298,27 @@ if __name__ == "__main__":
         help="Number of minutes behind before failing healthcheck",
     )
     parser.add_argument(
+        "--delay-seconds",
+        type=int,
+        default=5 * 60,
+        help="Seconds between data points",
+    )
+    parser.add_argument(
         "--once",
         action="store_true",
         help="Do not start scheduler. Get and store single data point",
     )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output",
+    )
     args = parser.parse_args()
+
+    LOG_LEVEL = logging.DEBUG if args.verbose else logging.INFO
 
     if args.health_check:
         delta = timedelta(minutes=args.health_check_delta)
         health_check(args.health_check_path, delta)
     else:
-        main(args.health_check_path, args.once)
+        main(args.health_check_path, args.once, args.delay_seconds)

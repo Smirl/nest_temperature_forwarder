@@ -34,6 +34,9 @@ spec:
         args:
           - /opt/code/temperature_forwarder.py
           - --health-check-path={{ .Values.healthCheck.path }}
+          - --delay-seconds={{ .Values.args.delaySeconds }}
+          - --postal-code={{ .Values.args.postalCode }}
+          - {{ if .Values.args.verbose }}--verbose{{ end }}
         {{- if .Values.healthCheck.enabled }}
         livenessProbe:
           exec:
