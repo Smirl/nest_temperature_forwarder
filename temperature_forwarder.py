@@ -209,7 +209,7 @@ def get_nest_records(nest_access_token: str):
                 {
                     "measurement": metric_key,
                     "tags": {"name": data["name"]},
-                    "fields": {"value": metric_value},
+                    "fields": {"value": float(metric_value)},
                 }
             )
         records.append(
@@ -220,7 +220,7 @@ def get_nest_records(nest_access_token: str):
                     "hvac_mode": data["state"]["hvac_mode"],
                     "hvac_state": data["state"]["hvac_state"],
                 },
-                "fields": {"value": 1},
+                "fields": {"value": 1.0},
             }
         )
 
@@ -256,8 +256,8 @@ def get_weather_records(postal_codes: Set[str], api_key: str):
         response.raise_for_status()
         response = response.json()
         weather = {
-            "temp_c": response["main"]["temp"],
-            "feelslike_c": response["main"]["feels_like"],
+            "temp_c": float(response["main"]["temp"]),
+            "feelslike_c": float(response["main"]["feels_like"]),
         }
         _log(weather)
         yield {
