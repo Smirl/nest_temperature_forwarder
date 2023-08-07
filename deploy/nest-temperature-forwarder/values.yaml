@@ -89,6 +89,9 @@ grafana:
       enabled	: true
       searchNamespace: nest
 
+  rbac:
+    pspEnabled: false
+
   admin:
     existingSecret: nest-temperature-forwarder
 
@@ -125,3 +128,7 @@ influxdb2:
     ## keys are `admin-password` and `admin-token`.
     ## If set, the password and token values above are ignored.
     existingSecret: nest-temperature-forwarder
+
+  # TODO: we need this but should upgrade chart first
+  pdb:
+    create: false
