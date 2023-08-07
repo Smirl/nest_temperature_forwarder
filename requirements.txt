@@ -1,2 +1,2 @@
 influxdb-client[ciso]==1.15.0
-requests==2.25.1
+requests==2.31.0
