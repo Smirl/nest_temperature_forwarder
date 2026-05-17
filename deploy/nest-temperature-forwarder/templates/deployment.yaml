@@ -30,9 +30,9 @@ spec:
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         command:
-          - python
+          - /app/.venv/bin/python
         args:
-          - /opt/code/temperature_forwarder.py
+          - /app/temperature_forwarder.py
           - --health-check-path={{ .Values.healthCheck.path }}
           - --delay-seconds={{ .Values.args.delaySeconds }}
           {{- with .Values.args.verbose }}
@@ -42,8 +42,8 @@ spec:
         livenessProbe:
           exec:
             command:
-            - python
-            - /opt/code/temperature_forwarder.py
+            - /app/.venv/bin/python
+            - /app/temperature_forwarder.py
             - --health-check
             - --health-check-delta={{ .Values.healthCheck.delta }}
             - --health-check-path={{ .Values.healthCheck.path }}
