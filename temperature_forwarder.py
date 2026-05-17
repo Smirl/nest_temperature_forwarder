@@ -6,10 +6,9 @@ import os
 import sys
 import time
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from operator import truth
 from sched import scheduler
-from typing import Optional, Set
 
 import requests
 from influxdb_client import InfluxDBClient, WriteApi
@@ -75,7 +74,7 @@ def main(health_check_path: str, once: bool, delay_seconds: int):
 
 
 def add_data_points(
-    write_api: Optional[WriteApi],
+    write_api: WriteApi | None,
     influx_bucket: str,
     health_check_path: str,
     postal_code: str,
@@ -84,7 +83,7 @@ def add_data_points(
 ):
     """Add a data point from nest thermostats & return the postal codes they are in."""
     records = []
-    postal_codes = set()
+    postal_codes: set[str] = set()
 
     # If any "hard coded" postal codes we add them now
     if postal_code:
@@ -104,7 +103,7 @@ def add_data_points(
         records.extend(weather_records)
 
     # Write all records to influxdb
-    now = datetime.utcnow().strftime(DATETIME_FORMAT)
+    now = datetime.now(timezone.utc).strftime(DATETIME_FORMAT)
     if write_api:
         _log(message="trying to write to influxdb", level=logging.DEBUG)
         for record in records:
@@ -125,9 +124,9 @@ def health_check(health_check_path: str, delta: timedelta):
     # Get last successful date
     with open(health_check_path) as f:
         content = f.read().strip()
-    date = datetime.strptime(content, DATETIME_FORMAT)
+    date = datetime.strptime(content, DATETIME_FORMAT).replace(tzinfo=timezone.utc)
     # Raise if not within delta
-    threshold = datetime.utcnow() - delta
+    threshold = datetime.now(timezone.utc) - delta
     if date < threshold:
         _log(
             health="false",
@@ -237,7 +236,7 @@ def get_nest_records(nest_access_token: str):
     return records, postal_codes
 
 
-def get_weather_records(postal_codes: Set[str], api_key: str):
+def get_weather_records(postal_codes: set[str], api_key: str):
     """Call the weather unlocked API for the given postal_codes."""
     for postal_code in postal_codes:
         # It works best if we just get the first part of the post code
@@ -271,7 +270,7 @@ def _log(obj=None, now=None, level=logging.INFO, **kwargs):
     """A simple json logger."""
     if level >= LOG_LEVEL:
         obj = obj if obj else {}
-        now = now if now else datetime.utcnow().strftime(DATETIME_FORMAT)
+        now = now if now else datetime.now(timezone.utc).strftime(DATETIME_FORMAT)
         print(json.dumps(dict({"time": now}, **obj, **kwargs)))  # put time first
 
 

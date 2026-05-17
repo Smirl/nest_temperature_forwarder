@@ -1,6 +1,10 @@
-FROM python:3.9-alpine
-ADD . /opt/code
-RUN apk add --no-cache gcc musl-dev && \
-	pip install -r /opt/code/requirements.txt && \
-	apk del gcc musl-dev
-CMD ["python", "/opt/code/temperature_forwarder.py"]
+FROM ghcr.io/astral-sh/uv:python3.13-alpine
+
+WORKDIR /app
+
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-cache
+
+COPY temperature_forwarder.py .
+
+CMD ["/app/.venv/bin/python", "temperature_forwarder.py"]

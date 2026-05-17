@@ -1,2 +1,0 @@
-influxdb-client[ciso]==1.15.0
-requests==2.32.0
